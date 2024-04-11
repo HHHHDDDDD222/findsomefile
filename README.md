@@ -16,7 +16,7 @@ linux+python
 9.自动递归检索文件夹中所有文件的手机号  
 10.自动递归检索文件夹中所有文件的邮箱  
 11.自动递归检索文件夹中wx小程序敏感信息
-包括模糊搜索sessionkey,acesstoken，AccessKeyId，AccessKeySecret，corpid，secret等  
+包括模糊搜索acesstoken，AccessKeyId，AccessKeySecret，corpid，secret等  
 12.对可能存在的hash进行提取，并返回所在文件路径  
  
 ## 使用方法
