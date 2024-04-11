@@ -23,4 +23,4 @@ linux+python
 需要使用运行在linux环境中
 chmod +x findsomefile  
 chmod +x find_apipath.py  
-./findsomefile -l <folder>  
+./findsomefile -l <*folder*>  
