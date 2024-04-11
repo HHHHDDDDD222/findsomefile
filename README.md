@@ -15,7 +15,7 @@ linux+python
 8.自动递归检索文件夹中所有文件的身份证信息  
 9.自动递归检索文件夹中所有文件的手机号  
 10.自动递归检索文件夹中所有文件的邮箱  
-11.自动递归检索文件夹中所有小程序敏感信息
+11.自动递归检索文件夹中wx小程序敏感信息
 包括acesstoken，AccessKeyId，AccessKeySecret，corpid，secret  
 12.对可能存在的hash进行提取，并返回所在文件路径  
  
