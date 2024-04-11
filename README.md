@@ -20,7 +20,7 @@ linux+python
 12.对可能存在的hash进行提取，并返回所在文件路径  
  
 ## 使用方法
-需要使用运行在linux环境中
-chmod +x findsomefile  
+需要使用运行在linux环境中  
+chmod +x findsomefile   
 chmod +x find_apipath.py  
 ./findsomefile -l <*folder*>  
