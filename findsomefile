@@ -12,10 +12,10 @@ echo '               ||     ||'
 
 # 定义脚本的使用方式
 usage() {
-	echo "作用:自动提取文件中存在的敏感信息"
-	echo ""
-	echo "Usage(使用方法): $0 -l <directory_path>"
-	echo "参考了findsomething中的正则"
+        echo "作用:自动提取文件中存在的敏感信息"
+        echo ""
+        echo "Usage(使用方法): $0 -l <directory_path>"
+        echo "参考了findsomething中的正则"
     exit 1
 }
 
@@ -36,7 +36,8 @@ fi
 clear
 
 echo "------------url---------------"
-url=$(find $file -type f -exec grep -oP '\bhttps?://\S+\b' {} + | grep -vE '\.(jpg|jpeg|png|gif|bmp|svg|webp|svg)' |grep -vE '\/jpg|jpeg|png|gif|bmp|svg|webp|svg' | sort -u | grep -vE 'qq\.|\.org|\.qq|\.weixin|weixin\.')
+url=$(find $file -type f -exec grep -oP '\bhttps?://\S+\b' {} + | sort -u )
+#| grep -vE 'qq\.|\.org|\.qq|\.weixin|weixin\.')
 echo "$url" | sort -u 
 
 
@@ -60,7 +61,7 @@ touch /tmp/.api_var
 echo "$file" > /tmp/.api_var
 
 echo "------------api in url---------------"
-find $file -type f -exec grep -oP 'https?://\S+' {} + | grep -vE '\.(jpg|jpeg|png|gif|bmp|svg|webp)' | grep -i 'api' | sort -u | grep -vE 'qq\.|\.org|\.qq|\.weixin|weixin\.'
+find $file -type f -exec grep -oP 'https?://\S+' {} + | grep -i 'api' | sort -u 
 
 #使用python脚本
 
@@ -100,68 +101,25 @@ find $file -type f -exec grep -E 'access_key|access_token|client_secret' {} + |s
 }
 aktoken |sort -u
 
-echo -e "\n"
-echo "----------------检测可能存在的AccessKeyId&AccessKeySecret----------------"
-echo "正则参考了hae以及ApkAnalyser"
-# 确保 $file 变量被设置为一个目录路径  
-if [ ! -d "$file" ]; then  
-    exit 1  
-fi  
-  
-# 搜索匹配AccessKeyId的文件  
-search_access_key_id() {  
-    local directory="$1"  
-    find "$directory" -type f -exec perl -0777 -ne '  
-        BEGIN { print "---AccessKeyId匹配的文件---\n" }  
-        if (/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).{24}$/) {  
-            print "文件: $ARGV 匹配到AccessKeyId！！！\n";  
-            exit 0; # 找到匹配后退出，避免处理更多文件  
-        }  
-    ' {} +  
-}  
-
-# 检查字符串是否匹配AccessKeySecret的正则表达式  
-check_access_key_secret() {  
-    local string="$1"  
-    echo "$string" | awk 'length($0) == 30 &&  
-        match($0, /[A-Z]/) &&  
-        match($0, /[a-z]/) &&  
-        match($0, /[0-9]/) {  
-            print  
-        }'  
-}  
-  
-# 调用函数并打印结果  
-search_access_key_id "$file"  
-  
-# 假设这里有一个 AccessKeySecret 字符串需要检查  
-access_key_secret="YourAccessKeySecretStringToCheck"  
-access_key_secret_result=$(check_access_key_secret "$access_key_secret")  
-  
-echo "----AccessKeySecret----"  
-if [ -n "$access_key_secret_result" ]; then  
-    echo "$access_key_secret_result 匹配 AccessKeySecret 的正则表达式"  
-else  
-    echo "未找到匹配的 AccessKeySecret"  
-fi
 
 #关键字匹配
 secret() {
+find $file -type f -exec grep -E '\b((Ac[Kk]eyS[Ee]cret)|(Ac[Kk]ey[Ii][Dd])|(A[Cc]cess_[Kk]ey)|(A[Cc]cess_[Ss]ecret)|(A[Cc]cess_[Ii][Dd])|(S[Ss]ecret_[Kk]ey))\b' {} +
 find $file -type f -exec grep -iE '[*]secret[id|key].*?=|secret[id|key].*?:".*?"' {} +
 find $file -type f -exec grep -iE 'secret[id|key].*?=|secret[id|key].*?:".*?"' {} +
 find $file -type f -exec grep -iE 'secret(id|key).*?=.*?".*?"|secret(id|key).*?:.*?".*?"' {} +
 find $file -type f -exec grep -iE 'appsecret|app_secret' {} +
-find $file -type f -exec grep -iE 'Accesskey|Accesskeysecret|ossAccessid' {} + |sort -u
 }
 secret=$(secret)
 echo "$secret" | sort -u
+
 
 echo -e "\n"
 echo "--------corpid--------------"
 # 搜索并输出包含特定字符串的文件列表
 find_corpid() {
-	find $file -type f -exec grep -iE '(wechatSecretKey|wechatAppId|corpid|SecretKey|Secretid|AppId)' {} + | sort -u
-	
+        find $file -type f -exec grep -iE '(wechatSecretKey|wechatAppId|corpid|SecretKey|Secretid|AppId)' {} + | sort -u
+
 }
 
 # 调用函数获取结果，并存入变量
@@ -170,36 +128,158 @@ corpid=$(find_corpid)
 # 输出结果
 echo "$corpid"
 
-echo -e "\n"
-echo "-------------oss key---------------"
-find $file -type f -exec grep -E '\b((Ac[Kk]eyS[Ee]cret)|(Ac[Kk]ey[Ii][Dd])|(A[Cc]cess_[Kk]ey)|(A[Cc]cess_[Ss]ecret)|(A[Cc]cess_[Ii][Dd])|(S[Ss]ecret_[Kk]ey))\b' {} +
 
 echo -e "\n"
-echo "------------Aliyun oss--------------"
-find $file -type f -exec grep -E '[[:alnum:]_.-]+\.oss\.aliyuncs\.com' {} +
+echo -e "\n"
+searchkey() {
+    echo "----------------Checking for Possible AccessKeyId & AccessSecretkey----------------"
 
-echo -e "\n \n"
-echo "------------hash------------------"
-ak() {
-find $file -type f -exec grep -oP 'LTAI[A-Za-z0-9]{12,20}' {} +
-find $file -type f -exec grep -oP 'AKID[A-Za-z0-9]{13,20}' {} +
-find $file -type f -exec grep -oP 'AK[\w\W]{10,62}' {} +
-find $file -type f -exec grep -oP 'AK[A-Za-z0-9]{10,40}' {} +
-find $file -type f -exec grep -oP 'JDC_[A-Z0-9]{28,32}' {} +
-find $file -type f -exec grep -oP 'AKLT[a-zA-Z0-9-_]{0,252}' {} +
-find $file -type f -exec grep -oP 'UC[A-Za-z0-9]{10,40}' {} +
-find $file -type f -exec grep -oP 'QY[A-Za-z0-9]{10,40}' {} +
-find $file -type f -exec grep -oP 'AKLT[a-zA-Z0-9-_]{16,28}' {} +
-find $file -type f -exec grep -oP 'LTC[A-Za-z0-9]{10,60}' {} +
-find $file -type f -exec grep -oP 'YD[A-Za-z0-9]{10,60}' {} +
-find $file -type f -exec grep -oP 'CTC[A-Za-z0-9]{10,60}' {} +
-find $file -type f -exec grep -oP 'YYT[A-Za-z0-9]{10,60}' {} +
-find $file -type f -exec grep -oP 'YY[A-Za-z0-9]{10,40}' {} +
-find $file -type f -exec grep -oP 'CI[A-Za-z0-9]{10,40}' {} +
-find $file -type f -exec grep -oP 'gcore[A-Za-z0-9]{10,30}' {} +
+    # Search for AccessKeyId
+    search_access_key_id() {
+        local directory="$1"
+        find "$directory" -type f -exec perl -0777 -ne '
+            BEGIN { print "---Files matching AccessKeyId---\n" }
+            if (/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).{24}$/) {
+                print "File: $ARGV Matched AccessKeyId!!!\n";
+                exit 0; # Exit after finding a match to avoid processing more files
+            }
+        ' {} +
+    }
+
+    # Check if string matches AccessKeySecret regex
+    check_access_key_secret() {
+        local string="$1"
+        echo "$string" | awk 'length($0) == 30 &&
+            match($0, /[A-Z]/) &&
+            match($0, /[a-z]/) &&
+            match($0, /[0-9]/) {
+                print
+            }'
+    }
+
+    # Call functions and print results
+    search_access_key_id "$file"
+
+    # Suppose there is an AccessKeySecret string to check here
+    access_key_secret="YourAccessKeySecretStringToCheck"
+    access_key_secret_result=$(check_access_key_secret "$access_key_secret")
+
+
+    if [ -n "$access_key_secret_result" ]; then
+        echo "$access_key_secret_result matched AccessKeySecret regex"
+    fi
+
+ 
+    search_dir="$file"
+
+    # Amazon Web Services
+    echo "Searching for Amazon Web Services keys..."
+    aws_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AKIA[A-Za-z0-9]{16}$')
+    if [ -n "$aws_keys" ]; then
+        echo "$aws_keys" | while IFS= read -r file; do
+            echo "Suspected Amazon Web Services key found in: $file"
+        done
+    fi
+
+    # Google Cloud Platform
+    echo "Searching for Google Cloud Platform keys..."
+    google_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^GOOG[\w\W]{10,30}$')
+    if [ -n "$google_keys" ]; then
+        echo "$google_keys" | while IFS= read -r file; do
+            echo "Suspected Google Cloud Platform key found in: $file"
+        done
+    fi
+
+    # Microsoft Azure
+    echo "Searching for Microsoft Azure keys..."
+    azure_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AZ[A-Za-z0-9]{34,40}$')
+    if [ -n "$azure_keys" ]; then
+        echo "$azure_keys" | while IFS= read -r file; do
+            echo "Suspected Microsoft Azure key found in: $file"
+        done
+    fi
+
+    # IBM Cloud
+    echo "Searching for IBM Cloud keys..."
+    ibm_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^IBM[A-Za-z0-9]{10,40}$')
+    if [ -n "$ibm_keys" ]; then
+        echo "$ibm_keys" | while IFS= read -r file; do
+            echo "Suspected IBM Cloud key found in: $file"
+        done
+    fi
+
+    # Oracle Cloud
+    echo "Searching for Oracle Cloud keys..."
+    oracle_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^OCID[A-Za-z0-9]{10,40}$')
+    if [ -n "$oracle_keys" ]; then
+        echo "$oracle_keys" | while IFS= read -r file; do
+            echo "Suspected Oracle Cloud key found in: $file"
+        done
+    fi
+
+    # Alibaba Cloud
+    echo "Searching for Alibaba Cloud keys..."
+    alibaba_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^LTAI[A-Za-z0-9]{12,20}$')
+    if [ -n "$alibaba_keys" ]; then
+        echo "$alibaba_keys" | while IFS= read -r file; do
+            echo "Suspected Alibaba Cloud key found in: $file"
+        done
+    fi
+
+    # Tencent Cloud
+    echo "Searching for Tencent Cloud keys..."
+    tencent_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AKID[A-Za-z0-9]{13,20}$')
+    if [ -n "$tencent_keys" ]; then
+        echo "$tencent_keys" | while IFS= read -r file; do
+            echo "Suspected Tencent Cloud key found in: $file"
+        done
+    fi
+
+    # Huawei Cloud
+    echo "Searching for Huawei Cloud keys..."
+    huawei_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AK[\w\W]{10,62}$')
+    if [ -n "$huawei_keys" ]; then
+        echo "$huawei_keys" | while IFS= read -r file; do
+            echo "Suspected Huawei Cloud key found in: $file"
+        done
+    fi
+
+    # Baidu Cloud
+    echo "Searching for Baidu Cloud keys..."
+    baidu_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AK[A-Za-z0-9]{10,40}$')
+    if [ -n "$baidu_keys" ]; then
+        echo "$baidu_keys" | while IFS= read -r file; do
+            echo "Suspected Baidu Cloud key found in: $file"
+        done
+    fi
+
+    # JD Cloud
+    echo "Searching for JD Cloud keys..."
+    jd_keys=$(find "$search_dir" -type f -print0 | xargs -0 grep -E '^AK[A-Za-z0-9]{10,40}$')
+    if [ -n "$jd_keys" ]; then
+        echo "$jd_keys" | while IFS= read -r file; do
+            echo "Suspected JD Cloud key found in: $file"
+        done
+    fi
 }
-ak | sort -u 
 
+# Execute the searchkey function, sort unique results, suppress sha512 output, and clean up
+searchkey | sort -u > .ak
+cat .ak | grep -v "sha512"
+rm .ak
+
+
+     #关键词搜索
+     echo -e "\033[32m======关键词搜索======\033[0m"
+#find $file -type f -exec grep -n -iE "access_key|accesskey|accessKeySecret|secret" {} + | awk -F: '{print "搜索到内容: \033[31m" $3 "\033[0m, 所在行数为: \033[31m" $2 "\033[0m, 所在文件位置: \033[31m" $1 "\033[0m"}'
+
+find $file -type f -exec grep -n -iE "access_key_id|access_key_Secret|access_key|accesskey|accessKeySecret|secret" {} + 
+
+
+
+echo -e "\n"
+echo -e "\n"
+echo -e "\n"
 echo "----------hash提取(16位/32位)--------"
 # 假设 $file 是一个目录路径  
 hashlist=()  
@@ -241,10 +321,14 @@ done
 if [[ ${#hashes[@]} -gt 0 ]]; then  
     echo "Found hashes:"  
     for hash in "${hashes[@]}"; do  
-        echo "$hash"  
+        echo "$hash"| grep -v "sha512"
     done  
 
 fi
+
+#sha512
+echo "======find sha512======"
+#find $file -type f -exec grep -iE "sha512" {} + |sort -u 
 
 
 echo ' ________________'
@@ -255,4 +339,3 @@ echo '        \  (oo)\_______'
 echo '           (__)\       )\/\'
 echo '               ||----w |'
 echo '               ||     ||'
-
